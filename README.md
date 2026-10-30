@@ -2,7 +2,7 @@
 
 > **CDS Security & Infrastructure, CSe2025, 3rd semester (SEA - Syddansk Erhvervsakademi)**
 >
-> **Group:** `Davide Jorge and Lucas Santos (islanders)` · **Repository:** `https://github.com/davide-jorge/sec-and-infra-compulsory-assignment.git` · **Submission:** 6 November 2026, 23:59 (Moodle)
+> **Group:** `Davide Jorge and Lucas Santos` · **Repository:** `https://github.com/davide-jorge/sec-and-infra-compulsory-assignment.git` · **Submission:** 6 November 2026, 23:59 (Moodle)
 
 ---
 
@@ -28,3 +28,49 @@
 ---
 
 # Part 1 – CDS.security
+
+## 1. Description of the login platform
+
+The platform is a web application where users authenticate with a **username and password** and, once logged in, see a user table whose available actions depend on the user's **role**.
+
+| Role | Permissions |
+|---|---|
+| `user` | Read the list of users |
+| `superuser` | Create, read, update and delete **users** |
+| `admin` | Create, read, update and delete **users, superusers and admins** |
+
+**Assumptions we made where the assignment is open:**
+- All authenticated roles may *read* the full user list (the `user` role exists to read "users in a table").
+- A `superuser` can only manage accounts with role `user`, and can never promote anyone to `superuser` or `admin`.
+- There is no self-registration; the first admin is seeded from an environment variable.
+
+### Technology stack
+
+| Layer | Choice |
+|---|---|
+| Backend | .NET 10 (C#), ASP.NET Core minimal APIs |
+| Data access | linq2db + Npgsql, PostgreSQL 17 (production) |
+| API docs | OpenAPI + Swagger UI (Development only) |
+| Password hashing | **Argon2id** (`Konscious.Security.Cryptography.Argon2`) |
+| Frontend | Bun, React, React Router, Tailwind + daisyUI |
+| Packaging | Multi-stage Dockerfile, Docker Compose |
+| IDE | JetBrains Rider |
+
+### Architecture
+
+```mermaid
+flowchart LR
+  B[Browser<br/>React SPA] -- "HTTP :8080<br/>HttpOnly session cookie" --> API
+  subgraph Container: app
+    API[Api<br/>endpoints, auth, rate limiting] --> SVC[Service<br/>business rules, interfaces]
+    INF[Infrastructure<br/>linq2db repositories] -. implements .-> SVC
+    SEC[Security<br/>Argon2id hasher] -. implements .-> SVC
+    API --> INF
+    API --> SEC
+  end
+  INF -- "SQL (internal network only)" --> DB[(PostgreSQL<br/>container: db)]
+```
+
+**Dependency direction:** `Service` has no dependency on any other project. `Infrastructure` and `Security` implement interfaces *defined in* `Service`, and `Api` wires everything together via dependency injection. This keeps the authorization rules testable without a database or a web server, and lets us replace the hashing algorithm or database without touching the business logic.
+
+The React app is built by Bun and served as static files by ASP.NET Core, so the whole solution is **one container on one port** (no CORS configuration needed).
