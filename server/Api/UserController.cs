@@ -29,4 +29,17 @@ public class UserController(UserService service) : ControllerBase
     {
         return service.UpdateUser(dto);
     }
+    
+    [HttpGet(nameof(GetUsers))]
+    public List<UserDto> GetUsers()
+    {
+        return service.GetUsers();
+    }
+    
+    [HttpPost(nameof(Login))]
+    public LoginResponseDto Login([FromBody] LoginRequestDto dto)
+    {
+        return service.Login(dto);
+    }
+    
 }

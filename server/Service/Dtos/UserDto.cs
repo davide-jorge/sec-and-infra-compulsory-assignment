@@ -8,7 +8,6 @@ namespace Service.Dtos;
     exclude:
     [
         nameof(User.PasswordHash),
-        nameof(User.Salt)
     ]
 )]  
 public partial class UserDto;
