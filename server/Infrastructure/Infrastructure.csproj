@@ -1,9 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
-  <ItemGroup>
-    <ProjectReference Include="..\Service\Service.csproj" />
-  </ItemGroup>
-
+  
   <ItemGroup>
     <PackageReference Include="linq2db" Version="6.5.1" />
     <PackageReference Include="linq2db.SQLite" Version="6.5.1" />
