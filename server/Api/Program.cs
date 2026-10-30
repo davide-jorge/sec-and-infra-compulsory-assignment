@@ -2,6 +2,7 @@ using API;
 using Infrastructure;
 using LinqToDB;
 using Service;
+using Service.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,7 +18,7 @@ builder.Services.AddScoped<myDbConnection>(_ =>
 
 
 builder.Services.AddScoped<UserService>();
-
+builder.Services.AddScoped<IPasswordHasher, Argon2PasswordHasher>();
 builder.Services.AddControllers();
 builder.Services.AddOpenApiDocument();
 builder.Services.AddCors();

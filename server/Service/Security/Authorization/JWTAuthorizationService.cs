@@ -1,12 +1,14 @@
-﻿using System.Security.Claims;
-
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text;
 using Infrastructure;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+using Service.Authorization;
 
-namespace Service.Authorization;
+namespace Service.Security.Authorization;
 
 public class JWTAuthorizationService(IConfiguration configuration) : IAuthorizationService
-
 {
     private const string Issuer = "security-api";
     private const string Audience = "security-api";
@@ -17,7 +19,7 @@ public class JWTAuthorizationService(IConfiguration configuration) : IAuthorizat
     {
         var claims = new[]
         {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
+            new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString())
         };
 
         var token = new JwtSecurityToken(

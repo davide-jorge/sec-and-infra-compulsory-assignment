@@ -1,9 +1,11 @@
 ﻿using Infrastructure;
+using LinqToDB;
 using Service.Dtos;
+using Service.Security;
 
 namespace Service;
 //todo use ENUMS FOR User;SuperUser,Admin
-public class UserService (myDbConnection db)
+public class UserService (myDbConnection db,IPasswordHasher passwordHasher)
 {
     public UserDto CreateUser(CreateUserRequestDto dto)
     {
@@ -14,14 +16,17 @@ public class UserService (myDbConnection db)
         if (existingUser != null)
             throw new InvalidOperationException("Username already exists.");
 
+        string passwordHash = passwordHasher.HashAndSaltPassword(dto.Password);
 
         var user = new User
         {
             UserId = Guid.NewGuid().ToString(),
-            Username = dto.Username.Trim(),
-            PasswordHash = "TEMPORARY",
+            Username = dto.Username,
+            PasswordHash = passwordHash,
             Role = "user"
         };
+
+        db.Insert(user);
         return new UserDto
         {
             UserId = user.UserId,
@@ -64,17 +69,21 @@ public class UserService (myDbConnection db)
             throw new UnauthorizedAccessException("Invalid username or password.");
         }
 
-        
-        //TODO implement the actual authentication
-        if (user.Username == "admin1" && dto.Password == "admin")
+        bool passwordIsValid = passwordHasher.VerifyPassword(
+            dto.Password,
+            user.PasswordHash
+            );
+
+        if (!passwordIsValid)
         {
-            return new LoginResponseDto
-            {
-                UserId = user.UserId,
-                Username = user.Username,
-                Role = user.Role,
-            };
+            throw new UnauthorizedAccessException("Invalid username or password.");
         }
-        throw new UnauthorizedAccessException("Invalid username or password.");
+
+        return new LoginResponseDto
+        {
+            UserId = user.UserId,
+            Username = user.Username,
+            Role = user.Role
+        };
     }
 }

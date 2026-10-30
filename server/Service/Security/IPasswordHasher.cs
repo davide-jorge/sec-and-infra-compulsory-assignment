@@ -1,7 +1,8 @@
-namespace Service.Security;
+﻿namespace Service.Security;
 
 public interface IPasswordHasher
 {
-    (string Hash, string Salt) HashingPassword(string password);
-    bool VerifyPassword(string password, string hash, string salt);
+    string HashAndSaltPassword(string password);
+    string HashPassword(string password, string salt);
+    bool VerifyPassword(string password, string hashedPassword);
 }
