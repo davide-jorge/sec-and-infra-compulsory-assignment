@@ -2,7 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Konscious.Security.Cryptography;
 
-namespace Security;
+namespace Service.Security;
 
 public class Argon2PasswordHasher : IPasswordHasher
 {

@@ -9,12 +9,8 @@
     "start": "NODE_ENV=production bun src/index.ts"
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.3.3",
-    "daisyui": "^5.7.50",
     "react": "^19",
-    "react-dom": "^19",
-    "react-router": "^8.5.1",
-    "tailwindcss": "^4.3.3"
+    "react-dom": "^19"
   },
   "devDependencies": {
     "@types/react": "^19",
