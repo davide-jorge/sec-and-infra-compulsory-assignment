@@ -11,12 +11,15 @@ namespace Api;
 public static class Startup
 {
     public static void ConfigureDomainServices(
-        this IServiceCollection services,
-        string jwtSecret)
+        this IServiceCollection services,IConfiguration configuration)
+        
     {
         services.AddScoped<UserService>();
         services.AddScoped<IPasswordHasher, Argon2PasswordHasher>();
         services.AddScoped<IAuthorizationService, JWTAuthorizationService>();
+        
+        var jwtSecret = configuration["JwtSecret"]
+                        ?? throw new InvalidOperationException("JwtSecret is missing.");
         
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
@@ -24,9 +27,9 @@ public static class Startup
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
-                    ValidIssuer = "security-api",
+                    ValidIssuer = configuration["Jwt:Issuer"],
                     ValidateAudience = true,
-                    ValidAudience = "security-api",
+                    ValidAudience = configuration["Jwt:Audience"],
                     ClockSkew = TimeSpan.Zero,
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,

@@ -9,5 +9,8 @@ public class CreateUserRequestDto
 
     [Required]
     public string Password { get; set; }
+    [Required]
+    public string Role { get; set; }
+    
     
 }

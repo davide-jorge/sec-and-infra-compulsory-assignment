@@ -21,7 +21,7 @@ public class JWTAuthorizationService(IConfiguration configuration) : IAuthorizat
     private readonly int _expirationMinutes = int.Parse(
         configuration["Jwt:ExpirationMinutes"]);
 
-};
+
 
     private readonly SymmetricSecurityKey _key = new(
         Encoding.UTF8.GetBytes(
@@ -33,14 +33,16 @@ public class JWTAuthorizationService(IConfiguration configuration) : IAuthorizat
     {
         var claims = new[]
         {
-            new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString())
+            new Claim(ClaimTypes.NameIdentifier, user.UserId),
+            new Claim(ClaimTypes.Name, user.Username),
+            new Claim(ClaimTypes.Role, user.Role)
         };
 
         var token = new JwtSecurityToken(
-            issuer: Issuer,
-            audience: Audience,
+            issuer: _issuer,
+            audience: _audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddHours(1),
+            expires: DateTime.UtcNow.AddMinutes(_expirationMinutes),
             signingCredentials: new SigningCredentials(_key, SecurityAlgorithms.HmacSha256));
 
         return new JwtSecurityTokenHandler().WriteToken(token);

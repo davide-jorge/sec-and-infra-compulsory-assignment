@@ -1,5 +1,4 @@
 using Api;
-using API;
 using Infrastructure;
 using LinqToDB;
 using Service;
@@ -19,8 +18,7 @@ builder.Services.AddScoped<myDbConnection>(_ =>
 
 
 builder.Services.ConfigureDomainServices(
-    builder.Configuration["JwtSecret"]
-    ?? throw new InvalidOperationException("JwtSecret is missing."));
+    builder.Configuration);
 
 
 builder.Services.AddControllers();
