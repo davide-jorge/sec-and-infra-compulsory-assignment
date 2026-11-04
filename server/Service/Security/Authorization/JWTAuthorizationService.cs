@@ -10,10 +10,24 @@ namespace Service.Security.Authorization;
 
 public class JWTAuthorizationService(IConfiguration configuration) : IAuthorizationService
 {
-    private const string Issuer = "security-api";
-    private const string Audience = "security-api";
-    private readonly SymmetricSecurityKey _key = new(Encoding.UTF8.GetBytes(
-        configuration["JwtSecret"] ?? throw new InvalidOperationException("JwtSecret is missing.")));
+    private readonly string _issuer =
+        configuration["Jwt:Issuer"]
+        ?? throw new InvalidOperationException("JWT Issuer is missing.");
+
+    private readonly string _audience =
+        configuration["Jwt:Audience"]
+        ?? throw new InvalidOperationException("JWT Audience is missing.");
+
+    private readonly int _expirationMinutes = int.Parse(
+        configuration["Jwt:ExpirationMinutes"]);
+
+};
+
+    private readonly SymmetricSecurityKey _key = new(
+        Encoding.UTF8.GetBytes(
+            configuration["JwtSecret"]
+            ?? throw new InvalidOperationException("JwtSecret is missing.")
+        ));
 
     public string GenerateToken(User user)
     {

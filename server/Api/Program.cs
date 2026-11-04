@@ -1,8 +1,9 @@
+using Api;
 using API;
 using Infrastructure;
 using LinqToDB;
 using Service;
-using Service.Security;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,26 +18,28 @@ builder.Services.AddScoped<myDbConnection>(_ =>
     new myDbConnection(options));
 
 
-builder.Services.AddScoped<UserService>();
-builder.Services.AddScoped<IPasswordHasher, Argon2PasswordHasher>();
+builder.Services.ConfigureDomainServices(
+    builder.Configuration["JwtSecret"]
+    ?? throw new InvalidOperationException("JwtSecret is missing."));
+
+
 builder.Services.AddControllers();
 builder.Services.AddOpenApiDocument();
 builder.Services.AddCors();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<MyExceptionHandler>();
 
+
 var app = builder.Build();
 
 app.MapGet("/", () => "Hello World!");
 
-
-
 app.UseExceptionHandler();
 app.UseCors(config => config.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin().SetIsOriginAllowed(_=>true));
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
 app.UseOpenApi();
 app.UseSwaggerUi();
-
-
 
 app.Run();

@@ -2,10 +2,12 @@
 using LinqToDB;
 using Service.Dtos;
 using Service.Security;
+using Service.Authorization;
 
 namespace Service;
 //todo use ENUMS FOR User;SuperUser,Admin
-public class UserService (myDbConnection db,IPasswordHasher passwordHasher)
+public class UserService (myDbConnection db,IPasswordHasher passwordHasher,
+    IAuthorizationService authorizationService)
 {
     public UserDto CreateUser(CreateUserRequestDto dto)
     {
