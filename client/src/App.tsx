@@ -15,7 +15,7 @@ type LoginResponse = {
     token: string;
 };
 
-const API = "https://server-cinder-surf-4618.fly.dev/User";
+const API = `${window.location.protocol}//${window.location.hostname}:8081/User`;
 
 export default function App() {
     const [token, setToken] = useState(sessionStorage.getItem("token") || "");

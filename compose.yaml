@@ -6,17 +6,18 @@ services:
     environment:
       PORT: "3000"
     ports:
-      - "127.0.0.1:3500:3000"
+      - "8080:3000"
 
   api:
     build: ./server
     environment:
+      JwtSecret: ${JWT_SECRET}
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: "Data Source=/app/data/app.db"
     volumes:
       - api-data:/app/data
     ports:
-      -  "127.0.0.1:3501:4000"
+      -  "8081:4000"
 
 volumes:
   api-data:

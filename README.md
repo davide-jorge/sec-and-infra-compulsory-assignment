@@ -58,7 +58,7 @@ compose.yaml            Container configuration for the server VM
 | `PATCH /User/UpdateUser` | `superuser`, `admin` | Updates username, password and role |
 | `DELETE /User/{id}` | `superuser`, `admin` | Deletes a user |
 
-A superuser can only manage accounts with the role `user`. An admin can manage every role. The restrictions are enforced **on the server**, both in the controller's authorization attributes and in the service logic. The buttons the frontend hides are only a convenience.
+A superuser can only manage accounts with the role `user`. An admin can manage every role. The restrictions are enforced **on the server**, both in the controller's authorization attributes and in the service logic. The buttons the frontend hides are only a convenience. The role is kept in `sessionStorage` to decide what to show, so editing that value reveals buttons but the server still rejects forbidden requests.
 
 ## Screenshots
 
@@ -95,6 +95,7 @@ A superuser can only manage accounts with the role `user`. An admin can manage e
 - The signing secret is mandatory configuration (`JwtSecret`) and is not stored in source control. Issuer and audience come from `server/Api/appsettings.json`.
 - The login response is identical for an unknown username and a wrong password, so the message does not reveal which usernames exist.
 - The frontend keeps the token in `sessionStorage` and sends it in the `Authorization` header.
+- Every create, update and delete loads the acting user from the database and checks that user's current role. A demoted or deleted user therefore loses write permissions at once, even if their token has not expired.
 
 ## 3. Limitations
 
@@ -108,6 +109,8 @@ These are known gaps in the current implementation.
 | Last admin / self-delete | Self-deletion and deleting or demoting the last admin are **not** prevented | Add both checks to the service layer |
 | CORS | Permissive | Allow only the client origin |
 | Transport | Plain HTTP in the lab, so the token travels unencrypted | TLS through a reverse proxy |
+| Usernames and roles | Update does not check for duplicate usernames, usernames are case-sensitive, and roles are compared as strings | Check on update, normalize usernames, use an enum for roles |
+| Session expiry | The token expires after 60 minutes, but the UI does not log out; it shows "Could not load users" | Log out and return to the login page on HTTP 401 |
 | Other | No security headers, no antiforgery (not needed for bearer tokens), no rehash when parameters change, no admin seeding, no tests | Add as needed |
 
 ## 4. Alternatives considered
@@ -249,7 +252,7 @@ docker run --rm hello-world
 
 | Service | Host port | Container port |
 |---|---|---|
-| Client (React) | **8080** | client container |
+| Client (React) | **8080** | 3000 |
 | API | **8081** | 4000 |
 | PostgreSQL | not published | 5432 |
 
@@ -257,13 +260,12 @@ Both published ports are inside the permitted range 8000–8100. The database ha
 
 ### Configuration
 
-The deployment uses `compose.yaml`, which starts three containers: `db` (PostgreSQL), `api` and `client`. It needs three values in a `.env` file next to it (never commit this file):
+The deployment uses `compose.yaml`, which starts three containers: `db` (PostgreSQL), `api` and `client`. It needs two values in a `.env` file next to it (never commit this file):
 
 | Variable | Meaning |
 |---|---|
 | `DB_PASSWORD` | PostgreSQL password |
 | `JWT_SECRET` | Long random signing secret, for example `openssl rand -base64 48` |
-| `SERVER_IP` | The server VM's address on VLAN 571 |
 
 The database is created from `db/init.sql` (schema and first admin account, exported from the development database with `pg_dump`). The script runs only when the data volume is empty.
 
@@ -274,10 +276,15 @@ docker compose up -d --build
 docker compose ps
 ```
 
-### Two things that must be right for the client machine to work
+### How the client finds the API
 
-1. **The API address is a build argument.** The frontend must not use the hard-coded Fly.io address in `client/src/App.tsx`. It must take its API address from the `API_URL` build argument (`http://<SERVER_IP>:8081`). Otherwise the client machine would talk to the internet deployment and not to the server on VLAN 571.
-2. **The address must be the server's IP, not `localhost`.** The React code runs in the browser on the client machine, so the browser connects to the API directly. This is also why the API needs CORS: the page is served from port 8080 and calls port 8081.
+The React code runs in the browser on the client machine, so the browser calls the API directly. `client/src/App.tsx` therefore builds the API address from the address the page was loaded from: the same host, on the API port 8081.
+
+```ts
+const API = `${window.location.protocol}//${window.location.hostname}:8081/User`;
+```
+
+A client that opens `http://<server-ip>:8080` talks to `http://<server-ip>:8081/User`, so no server address is compiled into the frontend. The first version called a hard-coded Fly.io address, which would have sent the client machine to the internet deployment instead of the server on VLAN 571. Because the page (port 8080) and the API (port 8081) are different origins, the API needs CORS.
 
 ## 6. Client on VLAN 570
 
@@ -316,7 +323,7 @@ Problems found when moving the application from its development setup to the ser
 | Challenge | Cause | Solution |
 |---|---|---|
 | The original `compose.yaml` could not start the system | It used a SQLite connection string while the API uses PostgreSQL, had no database service or schema, and did not set `JwtSecret` | New `compose.yaml` with a PostgreSQL service, `init.sql`, a health check, and `JWT_SECRET` and the connection string passed as environment variables |
-| Client would use the wrong backend | The frontend calls a hard-coded Fly.io URL | The API address is a build argument pointing to the server on VLAN 571 |
+| Client would use the wrong backend | The frontend calls a hard-coded Fly.io URL | The API address is derived from the host the page was loaded from (same host, port 8081) |
 | Services not reachable from another VLAN | Ports were bound to loopback (`3500`, `3501`) and outside the permitted range | Publish on `8080` and `8081`, which are inside 8000–8100 and open in the firewall |
 | Application would not start before the database was ready | Container start order | `depends_on` with `condition: service_healthy` and a `pg_isready` health check |
 
@@ -338,7 +345,7 @@ Problems found when moving the application from its development setup to the ser
 
 **Technical challenges.** The main one was that an application that worked in development did not work on the target infrastructure. The Compose file did not match the database the API uses, secrets were missing, the frontend pointed at an external URL, and the ports did not match what the firewall permits (see the challenges table).
 
-**What we learned about deploying an application.** Configuration must come from the environment and not from code (connection string, `JwtSecret`, API address). Container start order matters, and a published port is part of the network design. A browser-based frontend talks to the API from the *user's* machine, so "localhost" in its configuration does not mean the server.
+**What we learned about deploying an application.** Configuration must come from the environment and not from code (connection string, `JwtSecret`), and an address in browser code must not point at another deployment. Container start order matters, and a published port is part of the network design. A browser-based frontend talks to the API from the *user's* machine, so "localhost" in its configuration does not mean the server.
 
 **What we would do differently in a real company.**
 
