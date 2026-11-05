@@ -7,17 +7,18 @@ services:
       PORT: "3000"
     ports:
       - "8080:3000"
+    restart: unless-stopped
 
   api:
     build: ./server
     environment:
-      JwtSecret: ${JWT_SECRET}
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: "Data Source=/app/data/app.db"
     volumes:
       - api-data:/app/data
     ports:
       -  "8081:4000"
+    restart: unless-stopped
 
 volumes:
   api-data:
